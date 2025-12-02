@@ -121,6 +121,53 @@ router.get("/", getAllUsers);
  *   get:
  *     summary: Get user by ID
  *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     first_name:
+ *                       type: string
+ *                     last_name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     memberships:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           tier:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           max_sessions:
+ *                             type: integer
+ *                           created_at:
+ *                             type: string
+ *                           updated_at:
  */
 router.get("/:id", getUserProfile);
 

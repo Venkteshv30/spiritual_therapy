@@ -68,7 +68,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
-    const user = await UsersService.getUserById(req.params.id);
+    const user = await UsersService.getUserById(parseInt(req.params.id));
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
@@ -80,7 +80,10 @@ export const getUserProfile = async (req: Request, res: Response) => {
 
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
-    const user = await UsersService.updateUser(req.params.id, req.body);
+    const user = await UsersService.updateUser(
+      parseInt(req.params.id),
+      req.body
+    );
     res.json({ success: true, data: user });
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message });

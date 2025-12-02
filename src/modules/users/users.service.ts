@@ -1,13 +1,14 @@
+import { normalizeBigInt } from "../../common/utils/helperMethods";
 import prisma from "../../config/database";
 
-type User = Awaited<ReturnType<typeof prisma.user.findUnique>>;
-type UserCreateInput = Parameters<typeof prisma.user.create>[0]["data"];
-type UserUpdateInput = Parameters<typeof prisma.user.update>[0]["data"];
+type User = Awaited<ReturnType<typeof prisma.users.findUnique>>;
+type UserCreateInput = Parameters<typeof prisma.users.create>[0]["data"];
+type UserUpdateInput = Parameters<typeof prisma.users.update>[0]["data"];
 
 export const createUser = async (
   data: UserCreateInput
 ): Promise<NonNullable<User>> => {
-  return await prisma.user.create({ data });
+  return await prisma.users.create({ data });
 };
 
 type GetAllUsersOptions = {
@@ -24,7 +25,6 @@ export const getAllUsers = async (options: GetAllUsersOptions) => {
   const { page, limit, role, membershipTier, search, sortBy, sortOrder } =
     options;
 
-  // Build where clause for filtering
   const where: any = {};
 
   if (role) {
@@ -32,75 +32,88 @@ export const getAllUsers = async (options: GetAllUsersOptions) => {
   }
 
   if (membershipTier) {
-    where.membershipTier = membershipTier;
+    where.memberships = {
+      some: {
+        membership: {
+          tier: membershipTier,
+        },
+      },
+    };
   }
 
   if (search) {
     where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
+      { first_name: { contains: search, mode: "insensitive" } },
+      { last_name: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
-      { phoneNumber: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
     ];
   }
 
-  // Build orderBy clause
   const orderBy: any = {};
-  if (sortBy === "name" || sortBy === "email" || sortBy === "createdAt") {
-    orderBy[sortBy] = sortOrder;
+  if (["first_name", "last_name", "email", "created_at"].includes(sortBy)) {
+    orderBy[sortBy] = sortOrder || "desc";
   } else {
-    orderBy.createdAt = "desc"; // Default fallback
+    orderBy.created_at = "desc";
   }
 
-  // Calculate pagination
   const skip = (page - 1) * limit;
 
-  // Get total count for pagination
-  const total = await prisma.user.count({ where });
+  const total = await prisma.users.count({ where });
 
-  // Fetch users with pagination
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     where,
     select: {
       id: true,
-      name: true,
+      first_name: true,
+      last_name: true,
       email: true,
-      phoneNumber: true,
+      phone: true,
       role: true,
-      membershipTier: true,
-      membershipExpiry: true,
-      createdAt: true,
-      updatedAt: true,
+      created_at: true,
+      updated_at: true,
+      memberships: {
+        select: {
+          membership: {
+            select: {
+              tier: true,
+            },
+          },
+        },
+      },
     },
     orderBy,
     skip,
     take: limit,
   });
 
-  const totalPages = Math.ceil(total / limit);
+  // Safely normalize BigInt fields to string before returning
+  const safeUsers = users.map(normalizeBigInt);
 
   return {
-    users,
+    users: safeUsers,
     pagination: {
       page,
       limit,
       total,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
     },
   };
 };
 
-export const getUserById = async (id: string): Promise<User> => {
-  return await prisma.user.findUnique({
+export const getUserById = async (id: number): Promise<User> => {
+  const user = await prisma.users.findUnique({
     where: { id },
-    include: { guruProfile: true },
+    include: { sessions_owned: true, attendees: true },
   });
+  return normalizeBigInt(user);
 };
 
 export const updateUser = async (
-  id: string,
+  id: number,
   data: UserUpdateInput
 ): Promise<NonNullable<User>> => {
-  return await prisma.user.update({
+  return await prisma.users.update({
     where: { id },
     data,
   });

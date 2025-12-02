@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -36,118 +35,121 @@ enum SessionStatus {
 }
 
 model Users {
-  id             String      @id @default(uuid())
-  firebase_uid   String      @unique
-  first_name     String
-  last_name      String
-  email          String      @unique
-  phone          String      @unique
-  dob            DateTime?
-  nakshatra_id   String?
-  profession_id  String?
-  address        String?
-  role           Role        @default(user)
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @updatedAt
+  id            BigInt    @id @default(autoincrement())
+  firebase_uid  String    @unique
+  first_name    String
+  last_name     String
+  email         String    @unique
+  phone         String    @unique
+  dob           DateTime?
+  nakshatra_id  Int?
+  profession_id Int?
+  address       String?
+  role          Role      @default(user)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
-  nakshatra      Nakshatras? @relation(fields: [nakshatra_id], references: [id])
-  profession     Professions? @relation(fields: [profession_id], references: [id])
+  nakshatra          Nakshatras?        @relation(fields: [nakshatra_id], references: [id])
+  profession         Professions?       @relation(fields: [profession_id], references: [id])
+  memberships        UserMemberships[]
+  sessions_requested Sessions[]         @relation("RequestedSessions")
+  sessions_owned     Sessions[]         @relation("GuruSessions")
+  meetings_owned     Meetings[]
+  attendees          MeetingAttendees[]
 
-  memberships    UserMemberships[]
-  requestedSessions Sessions[] @relation("RequestedSessions")
-  guruSessions   Sessions[]   @relation("GuruSessions")
-  guruMeetings   Meetings[]
-  meetingAttendees MeetingAttendees[]
-  guruAssignments GuruAssignments[] @relation("GuruAssignedMembers")
+  @@map("users")
 }
 
 model Nakshatras {
-  id    String  @id @default(uuid())
+  id    Int     @id @default(autoincrement())
   name  String
   users Users[]
+
+  @@map("nakshatras")
 }
 
 model Professions {
-  id    String  @id @default(uuid())
+  id    Int     @id @default(autoincrement())
   title String
   users Users[]
+
+  @@map("professions")
 }
 
 model Memberships {
-  id           String         @id @default(uuid())
+  id           Int               @id @default(autoincrement())
   tier         MembershipTier
   price        Float
   max_sessions Int
-  created_at   DateTime @default(now())
-  userMappings UserMemberships[]
+  created_at   DateTime          @default(now())
+  users        UserMemberships[]
+
+  @@map("memberships")
 }
 
 model UserMemberships {
-  id             String      @id @default(uuid())
-  user_id        String
-  membership_id  String
-  start_date     DateTime
-  end_date       DateTime
-  is_active      Boolean     @default(true)
-  created_at     DateTime    @default(now())
+  id            BigInt   @id @default(autoincrement())
+  user_id       BigInt
+  membership_id Int
+  start_date    DateTime
+  end_date      DateTime
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
 
-  user           Users       @relation(fields: [user_id], references: [id])
-  membership     Memberships @relation(fields: [membership_id], references: [id])
+  user       Users       @relation(fields: [user_id], references: [id])
+  membership Memberships @relation(fields: [membership_id], references: [id])
+
+  @@map("user_memberships")
 }
 
 model Sessions {
-  id             String               @id @default(uuid())
+  id             BigInt               @id @default(autoincrement())
   title          String
   description    String?
   initiated_type SessionInitiatedType
   criteria_value String?
-  requested_by   String?
-  guru_id        String
-  status         SessionStatus @default(pending)
-  created_at     DateTime @default(now())
+  requested_by   BigInt?
+  guru_id        BigInt
+  status         SessionStatus        @default(pending)
+  created_at     DateTime             @default(now())
 
-  requester      Users?    @relation("RequestedSessions", fields: [requested_by], references: [id])
-  guru           Users     @relation("GuruSessions", fields: [guru_id], references: [id])
-  meetings       Meetings[]
+  requester Users?     @relation("RequestedSessions", fields: [requested_by], references: [id])
+  guru      Users      @relation("GuruSessions", fields: [guru_id], references: [id])
+  meetings  Meetings[]
+
+  @@map("sessions")
 }
 
 model Meetings {
-  id              String    @id @default(uuid())
-  session_id      String
-  guru_id         String
-  title           String
-  start_time      DateTime
-  end_time        DateTime?
-  max_attendees   Int
+  id               BigInt    @id @default(autoincrement())
+  session_id       BigInt
+  guru_id          BigInt
+  title            String
+  start_time       DateTime
+  end_time         DateTime?
+  max_attendees    Int
   agora_channel_id String
-  agora_token     String
-  is_live         Boolean   @default(false)
-  created_at      DateTime  @default(now())
+  agora_token      String
+  is_live          Boolean   @default(false)
+  created_at       DateTime  @default(now())
 
-  session         Sessions  @relation(fields: [session_id], references: [id])
-  guru            Users     @relation(fields: [guru_id], references: [id])
-  attendees       MeetingAttendees[]
+  session   Sessions           @relation(fields: [session_id], references: [id])
+  guru      Users              @relation(fields: [guru_id], references: [id])
+  attendees MeetingAttendees[]
+
+  @@map("meetings")
 }
 
 model MeetingAttendees {
-  id          String   @id @default(uuid())
-  meeting_id  String
-  user_id     String
-  joined_at   DateTime @default(now())
-  left_at     DateTime?
-  auto_added  Boolean  @default(false)
+  id         BigInt    @id @default(autoincrement())
+  meeting_id BigInt
+  user_id    BigInt
+  joined_at  DateTime  @default(now())
+  left_at    DateTime?
+  auto_added Boolean   @default(false)
 
-  meeting     Meetings @relation(fields: [meeting_id], references: [id])
-  user        Users    @relation(fields: [user_id], references: [id])
-}
+  meeting Meetings @relation(fields: [meeting_id], references: [id])
+  user    Users    @relation(fields: [user_id], references: [id])
 
-model GuruAssignments {
-  id          String   @id @default(uuid())
-  guru_id     String
-  user_id     String
-  method      SessionInitiatedType
-  created_at  DateTime @default(now())
-
-  guru        Users   @relation("GuruAssignedMembers", fields: [guru_id], references: [id])
-  user        Users   @relation(fields: [user_id], references: [id])
+  @@map("meeting_attendees")
 }
