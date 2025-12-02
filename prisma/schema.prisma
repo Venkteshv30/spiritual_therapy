@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  GURU
+  ADMIN
+  HELPDESK
+  GUEST
+}
+
+enum MembershipTier {
+  FREE
+  SILVER
+  GOLD
+  PREMIUM
+}
+
+enum SessionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model User {
+  id               String         @id @default(uuid())
+  phoneNumber      String         @unique
+  email            String?        @unique
+  name             String
+  role             Role           @default(USER)
+  nakshatra        String?
+  dateOfBirth      DateTime?
+  profession       String?
+  city             String?
+  state            String?
+  country          String?
+  membershipTier   MembershipTier @default(FREE)
+  membershipExpiry DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  sessionsRequested Session[]    @relation("SessionRequester")
+  attendances       Attendance[]
+  guruProfile       Guru?
+
+  @@index([phoneNumber])
+  @@index([email])
+}
+
+model Guru {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  bio            String?
+  specialization String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions Session[]
+  meetings Meeting[]
+}
+
+model Session {
+  id            String        @id @default(uuid())
+  title         String
+  description   String?
+  status        SessionStatus @default(PENDING)
+  requestedById String
+  requestedBy   User          @relation("SessionRequester", fields: [requestedById], references: [id])
+  assignedToId  String?
+  assignedTo    Guru?         @relation(fields: [assignedToId], references: [id])
+  scheduledAt   DateTime?
+  maxCapacity   Int           @default(50)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  meeting Meeting?
+
+  @@index([status])
+  @@index([requestedById])
+}
+
+model Meeting {
+  id               String    @id @default(uuid())
+  sessionId        String    @unique
+  session          Session   @relation(fields: [sessionId], references: [id])
+  guruId           String
+  guru             Guru      @relation(fields: [guruId], references: [id])
+  agoraChannelName String    @unique
+  agoraToken       String?
+  startTime        DateTime
+  endTime          DateTime?
+  duration         Int       @default(60)
+  maxUsers         Int       @default(50)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  attendances Attendance[]
+
+  @@index([agoraChannelName])
+  @@index([startTime])
+}
+
+model Attendance {
+  id        String    @id @default(uuid())
+  meetingId String
+  meeting   Meeting   @relation(fields: [meetingId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  @@unique([meetingId, userId])
+  @@index([meetingId])
+  @@index([userId])
+}
