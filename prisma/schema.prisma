@@ -4,121 +4,150 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
-  USER
-  GURU
-  ADMIN
-  HELPDESK
-  GUEST
+  user
+  guru
+  admin
+  helpdesk
 }
 
 enum MembershipTier {
-  FREE
-  SILVER
-  GOLD
-  PREMIUM
+  free
+  silver
+  gold
+  premium
+}
+
+enum SessionInitiatedType {
+  nakshatra
+  profession
+  manual
+  open
+  random
 }
 
 enum SessionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  COMPLETED
+  pending
+  approved
+  rejected
 }
 
-model User {
-  id               String         @id @default(uuid())
-  phoneNumber      String         @unique
-  email            String?        @unique
-  name             String
-  role             Role           @default(USER)
-  nakshatra        String?
-  dateOfBirth      DateTime?
-  profession       String?
-  city             String?
-  state            String?
-  country          String?
-  membershipTier   MembershipTier @default(FREE)
-  membershipExpiry DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+model Users {
+  id             String      @id @default(uuid())
+  firebase_uid   String      @unique
+  first_name     String
+  last_name      String
+  email          String      @unique
+  phone          String      @unique
+  dob            DateTime?
+  nakshatra_id   String?
+  profession_id  String?
+  address        String?
+  role           Role        @default(user)
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
 
-  sessionsRequested Session[]    @relation("SessionRequester")
-  attendances       Attendance[]
-  guruProfile       Guru?
+  nakshatra      Nakshatras? @relation(fields: [nakshatra_id], references: [id])
+  profession     Professions? @relation(fields: [profession_id], references: [id])
 
-  @@index([phoneNumber])
-  @@index([email])
+  memberships    UserMemberships[]
+  requestedSessions Sessions[] @relation("RequestedSessions")
+  guruSessions   Sessions[]   @relation("GuruSessions")
+  guruMeetings   Meetings[]
+  meetingAttendees MeetingAttendees[]
+  guruAssignments GuruAssignments[] @relation("GuruAssignedMembers")
 }
 
-model Guru {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id])
-  bio            String?
-  specialization String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  sessions Session[]
-  meetings Meeting[]
+model Nakshatras {
+  id    String  @id @default(uuid())
+  name  String
+  users Users[]
 }
 
-model Session {
-  id            String        @id @default(uuid())
-  title         String
-  description   String?
-  status        SessionStatus @default(PENDING)
-  requestedById String
-  requestedBy   User          @relation("SessionRequester", fields: [requestedById], references: [id])
-  assignedToId  String?
-  assignedTo    Guru?         @relation(fields: [assignedToId], references: [id])
-  scheduledAt   DateTime?
-  maxCapacity   Int           @default(50)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  meeting Meeting?
-
-  @@index([status])
-  @@index([requestedById])
+model Professions {
+  id    String  @id @default(uuid())
+  title String
+  users Users[]
 }
 
-model Meeting {
-  id               String    @id @default(uuid())
-  sessionId        String    @unique
-  session          Session   @relation(fields: [sessionId], references: [id])
-  guruId           String
-  guru             Guru      @relation(fields: [guruId], references: [id])
-  agoraChannelName String    @unique
-  agoraToken       String?
-  startTime        DateTime
-  endTime          DateTime?
-  duration         Int       @default(60)
-  maxUsers         Int       @default(50)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  attendances Attendance[]
-
-  @@index([agoraChannelName])
-  @@index([startTime])
+model Memberships {
+  id           String         @id @default(uuid())
+  tier         MembershipTier
+  price        Float
+  max_sessions Int
+  created_at   DateTime @default(now())
+  userMappings UserMemberships[]
 }
 
-model Attendance {
-  id        String    @id @default(uuid())
-  meetingId String
-  meeting   Meeting   @relation(fields: [meetingId], references: [id])
-  userId    String
-  user      User      @relation(fields: [userId], references: [id])
-  joinedAt  DateTime  @default(now())
-  leftAt    DateTime?
+model UserMemberships {
+  id             String      @id @default(uuid())
+  user_id        String
+  membership_id  String
+  start_date     DateTime
+  end_date       DateTime
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now())
 
-  @@unique([meetingId, userId])
-  @@index([meetingId])
-  @@index([userId])
+  user           Users       @relation(fields: [user_id], references: [id])
+  membership     Memberships @relation(fields: [membership_id], references: [id])
+}
+
+model Sessions {
+  id             String               @id @default(uuid())
+  title          String
+  description    String?
+  initiated_type SessionInitiatedType
+  criteria_value String?
+  requested_by   String?
+  guru_id        String
+  status         SessionStatus @default(pending)
+  created_at     DateTime @default(now())
+
+  requester      Users?    @relation("RequestedSessions", fields: [requested_by], references: [id])
+  guru           Users     @relation("GuruSessions", fields: [guru_id], references: [id])
+  meetings       Meetings[]
+}
+
+model Meetings {
+  id              String    @id @default(uuid())
+  session_id      String
+  guru_id         String
+  title           String
+  start_time      DateTime
+  end_time        DateTime?
+  max_attendees   Int
+  agora_channel_id String
+  agora_token     String
+  is_live         Boolean   @default(false)
+  created_at      DateTime  @default(now())
+
+  session         Sessions  @relation(fields: [session_id], references: [id])
+  guru            Users     @relation(fields: [guru_id], references: [id])
+  attendees       MeetingAttendees[]
+}
+
+model MeetingAttendees {
+  id          String   @id @default(uuid())
+  meeting_id  String
+  user_id     String
+  joined_at   DateTime @default(now())
+  left_at     DateTime?
+  auto_added  Boolean  @default(false)
+
+  meeting     Meetings @relation(fields: [meeting_id], references: [id])
+  user        Users    @relation(fields: [user_id], references: [id])
+}
+
+model GuruAssignments {
+  id          String   @id @default(uuid())
+  guru_id     String
+  user_id     String
+  method      SessionInitiatedType
+  created_at  DateTime @default(now())
+
+  guru        Users   @relation("GuruAssignedMembers", fields: [guru_id], references: [id])
+  user        Users   @relation(fields: [user_id], references: [id])
 }
