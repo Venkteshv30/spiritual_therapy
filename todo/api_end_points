@@ -1,0 +1,122 @@
+# 📘 Spiritual Therapy Backend API - FINALIZED Endpoint Summary (Post Discussions)
+
+---
+
+## 🔐 Auth Endpoints (via Firebase)
+
+| Method | Endpoint     | Description                                                |
+| ------ | ------------ | ---------------------------------------------------------- |
+| POST   | /auth/login  | Log in via Firebase token or Google OAuth                  |
+| POST   | /auth/signup | Create a user profile after Firebase signup                |
+| GET    | /auth/me     | Get current logged-in user details (requires Bearer token) |
+| POST   | /auth/logout | Logout (optional if using stateless JWTs)                  |
+
+---
+
+## 👤 Users
+
+| Method | Endpoint            | Description                                             |
+| ------ | ------------------- | ------------------------------------------------------- |
+| GET    | /users              | List all users with filters, search, pagination         |
+| GET    | /users/:id          | Get a specific user by ID                               |
+| PUT    | /users/:id          | Update user profile                                     |
+| DELETE | /users/:id          | Deactivate or soft-delete user                          |
+| GET    | /users/:id/meetings | Get all meetings the user is invited to or has attended |
+
+---
+
+## 🧘 Gurus
+
+| Method | Endpoint            | Description                   |
+| ------ | ------------------- | ----------------------------- |
+| GET    | /gurus              | List all gurus                |
+| GET    | /gurus/:id          | Get guru details              |
+| POST   | /gurus/assign       | Assign guru to a session      |
+| GET    | /gurus/:id/sessions | Sessions created by this guru |
+| GET    | /gurus/:id/meetings | All meetings led by this guru |
+
+---
+
+## 🪔 Sessions (Guru-Initiated, Code-Creates Meetings)
+
+| Method | Endpoint               | Description                                                    |
+| ------ | ---------------------- | -------------------------------------------------------------- |
+| POST   | /sessions              | Guru creates a session (criteria: profession/nakshatra/custom) |
+| GET    | /sessions              | List all sessions (filters: guruId, date, etc.)                |
+| GET    | /sessions/:id          | Get session details                                            |
+| PATCH  | /sessions/:id/status   | Update session status (approved, completed, cancelled)         |
+| PATCH  | /sessions/:id/schedule | Update scheduled time or recurrence config                     |
+
+🧠 Internal backend flow on creation/approval:
+
+- Automatically create a `Meeting`
+- Match eligible users via session criteria (profession/nakshatra/etc.)
+- Populate `MeetingAttendees`
+
+---
+
+## 📅 Meetings (Auto-Created by Backend)
+
+| Method | Endpoint                | Description                                         |
+| ------ | ----------------------- | --------------------------------------------------- |
+| GET    | /meetings               | List all meetings (for dashboards or filters)       |
+| GET    | /meetings/:id           | Get meeting details                                 |
+| GET    | /meetings/:id/attendees | Get attendees for a meeting                         |
+| POST   | /meetings/:id/join      | User joins meeting (returns Agora token + metadata) |
+| POST   | /meetings/:id/leave     | User leaves meeting (optional)                      |
+| PATCH  | /meetings/:id/control   | Guru controls: mute all, unmute selected            |
+| GET    | /users/:id/meetings     | User-specific view of meetings                      |
+| GET    | /gurus/:id/meetings     | Guru-specific view of meetings led                  |
+
+---
+
+## 🧾 Memberships
+
+| Method | Endpoint              | Description                             |
+| ------ | --------------------- | --------------------------------------- |
+| GET    | /memberships          | List available membership tiers         |
+| POST   | /users/:id/membership | Assign or update user’s membership tier |
+
+---
+
+## 🌌 Config Tables (Reference Data)
+
+| Method | Endpoint     | Description                                    |
+| ------ | ------------ | ---------------------------------------------- |
+| GET    | /nakshatras  | List all nakshatra types                       |
+| GET    | /professions | List all professions                           |
+| GET    | /roles       | List valid roles (user, guru, admin, helpdesk) |
+
+---
+
+## 🎥 Agora Internal APIs
+
+| Method | Endpoint       | Description                                   |
+| ------ | -------------- | --------------------------------------------- |
+| POST   | /agora/token   | Generate Agora token (join channel)           |
+| POST   | /agora/control | Guru control actions (mute all, unmute, etc.) |
+
+---
+
+## 🛠️ Utilities
+
+| Method | Endpoint | Description                                      |
+| ------ | -------- | ------------------------------------------------ |
+| GET    | /health  | Health check endpoint                            |
+| GET    | /version | App version info                                 |
+| GET    | /config  | Return config/environment variables (admin only) |
+
+---
+
+## 🚀 Automation (CRON Job / Scheduler Logic)
+
+_Backend scheduled job (optional):_
+
+- **Runs daily at midnight**
+- Finds sessions with status = "scheduled" and date = today
+- Creates a `Meeting`
+- Assigns users based on session logic (nakshatra/profession)
+
+---
+
+> 🔐 All secure routes require Firebase Bearer token and will check user roles (`user`, `guru`, `admin`, `helpdesk`) for authorization.
