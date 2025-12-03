@@ -3,6 +3,23 @@
 -- Spiritual Therapy Backend Setup Script (Full DB)
 -- ================================================
 
+-- Database: spiritual_therapy
+
+-- DROP DATABASE IF EXISTS spiritual_therapy;
+
+CREATE DATABASE spiritual_therapy
+    WITH
+    OWNER = postgres
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.utf8'
+    LC_CTYPE = 'en_US.utf8'
+    LOCALE_PROVIDER = 'libc'
+    TABLESPACE = pg_default
+    CONNECTION LIMIT = -1
+    IS_TEMPLATE = False;
+
+    
+
 -- DROP TABLES IF THEY EXIST (clean slate)
 DROP TABLE IF EXISTS meeting_attendees, meetings, sessions, user_memberships,
 users, guru_assignments, memberships, professions, nakshatras CASCADE;
